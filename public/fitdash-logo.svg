@@ -1,0 +1,13 @@
+<svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background -->
+  <rect width="200" height="200" rx="40" fill="#FC4C02"/>
+  <!-- Heartrate / activity line -->
+  <polyline
+    points="20,100 55,100 75,40 100,160 125,60 145,100 180,100"
+    fill="none"
+    stroke="white"
+    stroke-width="14"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+</svg>

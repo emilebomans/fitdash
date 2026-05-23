@@ -9,6 +9,12 @@ import { Input } from '@/components/ui/input'
 const SPORTS = ['All', 'Ride', 'VirtualRide', 'Run', 'Walk', 'Other']
 const PAGE_SIZE = 25
 
+// Defined outside component to avoid "created during render" error
+function SortIcon({ active, dir }: { active: boolean; dir: 'asc' | 'desc' }) {
+  if (!active) return null
+  return <span className="ml-1">{dir === 'asc' ? '↑' : '↓'}</span>
+}
+
 export function ActivityTable({ activities }: { activities: Activity[] }) {
   const [sport, setSport] = useState('All')
   const [search, setSearch] = useState('')
@@ -44,12 +50,21 @@ export function ActivityTable({ activities }: { activities: Activity[] }) {
     setPage(1)
   }
 
-  const SortIcon = ({ k }: { k: keyof Activity }) =>
-    sortKey === k ? <span className="ml-1">{sortDir === 'asc' ? '↑' : '↓'}</span> : null
-
   if (!activities.length) {
     return <p className="text-muted-foreground text-sm">No activities yet — sync Strava on the Connect page.</p>
   }
+
+  const cols: { label: string; key: keyof Activity; mobile?: boolean }[] = [
+    { label: 'Date', key: 'start_date', mobile: true },
+    { label: 'Activity', key: 'name', mobile: true },
+    { label: 'Type', key: 'sport_type', mobile: true },
+    { label: 'TSS', key: 'tss', mobile: true },
+    { label: 'Distance', key: 'distance' },
+    { label: 'Duration', key: 'moving_time' },
+    { label: 'Elevation', key: 'elevation_gain' },
+    { label: 'Avg Power', key: 'weighted_avg_watts' },
+    { label: 'Avg HR', key: 'average_heartrate' },
+  ]
 
   return (
     <div className="space-y-4">
@@ -81,32 +96,21 @@ export function ActivityTable({ activities }: { activities: Activity[] }) {
         <table className="w-full text-sm">
           <thead className="bg-secondary/50">
             <tr className="text-muted-foreground text-xs uppercase tracking-wider">
-              {/* Always visible */}
-              <th className="text-left px-4 py-3 cursor-pointer hover:text-foreground select-none whitespace-nowrap"
-                onClick={() => toggleSort('start_date')}>Date<SortIcon k="start_date" /></th>
-              <th className="text-left px-4 py-3 cursor-pointer hover:text-foreground select-none"
-                onClick={() => toggleSort('name')}>Activity<SortIcon k="name" /></th>
-              <th className="text-left px-4 py-3 cursor-pointer hover:text-foreground select-none"
-                onClick={() => toggleSort('sport_type')}>Type<SortIcon k="sport_type" /></th>
-              <th className="text-left px-4 py-3 cursor-pointer hover:text-foreground select-none whitespace-nowrap"
-                onClick={() => toggleSort('tss')}>TSS<SortIcon k="tss" /></th>
-              {/* Hidden on mobile */}
-              <th className="hidden md:table-cell text-left px-4 py-3 cursor-pointer hover:text-foreground select-none whitespace-nowrap"
-                onClick={() => toggleSort('distance')}>Distance<SortIcon k="distance" /></th>
-              <th className="hidden md:table-cell text-left px-4 py-3 cursor-pointer hover:text-foreground select-none whitespace-nowrap"
-                onClick={() => toggleSort('moving_time')}>Duration<SortIcon k="moving_time" /></th>
-              <th className="hidden md:table-cell text-left px-4 py-3 cursor-pointer hover:text-foreground select-none whitespace-nowrap"
-                onClick={() => toggleSort('elevation_gain')}>Elevation<SortIcon k="elevation_gain" /></th>
-              <th className="hidden md:table-cell text-left px-4 py-3 cursor-pointer hover:text-foreground select-none whitespace-nowrap"
-                onClick={() => toggleSort('weighted_avg_watts')}>Avg Power<SortIcon k="weighted_avg_watts" /></th>
-              <th className="hidden md:table-cell text-left px-4 py-3 cursor-pointer hover:text-foreground select-none whitespace-nowrap"
-                onClick={() => toggleSort('average_heartrate')}>Avg HR<SortIcon k="average_heartrate" /></th>
+              {cols.map(({ label, key, mobile }) => (
+                <th
+                  key={key}
+                  className={`text-left px-4 py-3 cursor-pointer hover:text-foreground select-none whitespace-nowrap ${!mobile ? 'hidden md:table-cell' : ''}`}
+                  onClick={() => toggleSort(key)}
+                >
+                  {label}
+                  <SortIcon active={sortKey === key} dir={sortDir} />
+                </th>
+              ))}
             </tr>
           </thead>
           <tbody>
             {paged.map(act => (
               <tr key={act.id} className="border-t border-white/5 hover:bg-secondary/40 transition-colors">
-                {/* Always visible */}
                 <td className="px-4 py-3 text-muted-foreground whitespace-nowrap">
                   <Link href={`/activities/${act.id}`} className="hover:text-primary">{formatDate(act.start_date)}</Link>
                 </td>
@@ -116,12 +120,9 @@ export function ActivityTable({ activities }: { activities: Activity[] }) {
                   </Link>
                 </td>
                 <td className="px-4 py-3 whitespace-nowrap">
-                  <span>{sportEmoji(act.sport_type)}<span className="hidden md:inline"> {act.sport_type}</span></span>
+                  {sportEmoji(act.sport_type)}<span className="hidden md:inline"> {act.sport_type}</span>
                 </td>
-                <td className="px-4 py-3 font-medium">
-                  {act.tss ? Math.round(act.tss) : '—'}
-                </td>
-                {/* Hidden on mobile */}
+                <td className="px-4 py-3 font-medium">{act.tss ? Math.round(act.tss) : '—'}</td>
                 <td className="hidden md:table-cell px-4 py-3 text-muted-foreground">
                   {act.distance ? formatDistance(act.distance) : '—'}
                 </td>
@@ -147,17 +148,11 @@ export function ActivityTable({ activities }: { activities: Activity[] }) {
       <div className="flex items-center justify-between text-sm text-muted-foreground">
         <span>{total} activities</span>
         <div className="flex gap-2">
-          <button
-            disabled={page === 1}
-            onClick={() => setPage(p => p - 1)}
-            className="px-3 py-2 min-h-[44px] rounded bg-secondary disabled:opacity-40 hover:bg-secondary/80"
-          >← Prev</button>
+          <button disabled={page === 1} onClick={() => setPage(p => p - 1)}
+            className="px-3 py-2 min-h-[44px] rounded bg-secondary disabled:opacity-40 hover:bg-secondary/80">← Prev</button>
           <span className="px-2 py-2">Page {page} of {totalPages}</span>
-          <button
-            disabled={page === totalPages}
-            onClick={() => setPage(p => p + 1)}
-            className="px-3 py-2 min-h-[44px] rounded bg-secondary disabled:opacity-40 hover:bg-secondary/80"
-          >Next →</button>
+          <button disabled={page === totalPages} onClick={() => setPage(p => p + 1)}
+            className="px-3 py-2 min-h-[44px] rounded bg-secondary disabled:opacity-40 hover:bg-secondary/80">Next →</button>
         </div>
       </div>
     </div>

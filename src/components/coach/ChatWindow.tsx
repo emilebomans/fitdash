@@ -53,7 +53,7 @@ export function ChatWindow({ initialMessages }: { initialMessages: Message[] }) 
 
       const reader = res.body!.getReader()
       const decoder = new TextDecoder()
-      let assistantContent = ''
+      const accumulated = { content: '' }
 
       while (true) {
         const { done, value } = await reader.read()
@@ -69,16 +69,17 @@ export function ChatWindow({ initialMessages }: { initialMessages: Message[] }) 
             const { text, error } = JSON.parse(data)
             if (error) throw new Error(error)
             if (text) {
-              assistantContent += text
+              accumulated.content += text
+              const current = accumulated.content
               setMessages(prev => [
                 ...prev.slice(0, -1),
-                { role: 'assistant', content: assistantContent },
+                { role: 'assistant', content: current },
               ])
             }
-          } catch {}
+          } catch (_) { /* ignore parse errors */ }
         }
       }
-    } catch (err) {
+    } catch (_) {
       setMessages(prev => [
         ...prev.slice(0, -1),
         { role: 'assistant', content: 'Something went wrong. Please try again.' },
